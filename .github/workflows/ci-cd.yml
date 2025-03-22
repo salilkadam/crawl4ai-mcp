@@ -188,19 +188,63 @@ jobs:
       
       - name: Sync ArgoCD application
         run: |
+          # Function to check for ongoing operations
+          check_operations() {
+            echo "Checking for ongoing operations..."
+            if argocd app get ${{ secrets.ARGOCD_APP_NAME }} -o json | jq -r '.status.operationState.phase' | grep -q "Running"; then
+              return 0  # Operation in progress
+            fi
+            return 1  # No operation in progress
+          }
+          
+          # Function to terminate ongoing operation
+          terminate_operation() {
+            echo "Terminating ongoing operation..."
+            argocd app terminate-op ${{ secrets.ARGOCD_APP_NAME }}
+            
+            # Wait for operation to terminate
+            echo "Waiting for operation to terminate..."
+            max_wait=30
+            wait_count=0
+            while check_operations; do
+              if [ $wait_count -ge $max_wait ]; then
+                echo "Failed to terminate operation after $max_wait seconds"
+                return 1
+              fi
+              wait_count=$((wait_count + 1))
+              sleep 1
+            done
+            return 0
+          }
+          
           # Sync with retry
           max_retries=3
           retry_count=0
-          while ! argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
-            --force \
-            --prune \
-            --retry-limit 3 \
-            --timeout 300; do
+          while true; do
+            # Check for ongoing operations
+            if check_operations; then
+              echo "Found ongoing operation, attempting to terminate..."
+              if ! terminate_operation; then
+                echo "Failed to terminate ongoing operation"
+                exit 1
+              fi
+            fi
+            
+            # Attempt sync
+            if argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
+              --force \
+              --prune \
+              --retry-limit 3 \
+              --timeout 300; then
+              break  # Sync successful
+            fi
+            
+            # Handle retry logic
+            retry_count=$((retry_count + 1))
             if [ $retry_count -ge $max_retries ]; then
               echo "Failed to sync application after $max_retries attempts"
               exit 1
             fi
-            retry_count=$((retry_count + 1))
             echo "Retrying sync (attempt $retry_count/$max_retries)..."
             sleep 10
           done
