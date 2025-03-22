@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  DOCKER_IMAGE: ${{ secrets.CUSTOM_DOCKER_USERNAME }}/crawl4ai-mcp
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/crawl4ai-mcp
   K8S_NAMESPACE: crawl4ai
 
 jobs:
@@ -22,8 +22,8 @@ jobs:
       - name: Login to Docker Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.CUSTOM_DOCKER_USERNAME }}
-          password: ${{ secrets.CUSTOM_DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Extract metadata for Docker
         id: meta
@@ -63,20 +63,20 @@ jobs:
       
       - name: Login to ArgoCD
         run: |
-          argocd login ${{ secrets.CUSTOM_ARGOCD_SERVER }} \
-            --username ${{ secrets.CUSTOM_ARGOCD_USERNAME }} \
-            --password ${{ secrets.CUSTOM_ARGOCD_PASSWORD }} \
+          argocd login ${{ secrets.ARGOCD_SERVER }} \
+            --username ${{ secrets.ARGOCD_USERNAME }} \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure \
             --grpc-web
       
       - name: Update deployment image
         run: |
-          argocd app set ${{ secrets.CUSTOM_ARGOCD_APP_NAME }} \
+          argocd app set ${{ secrets.ARGOCD_APP_NAME }} \
             --parameter image.tag=${{ github.sha }}
       
       - name: Sync ArgoCD application
         run: |
-          argocd app sync ${{ secrets.CUSTOM_ARGOCD_APP_NAME }} \
+          argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
             --force \
             --prune \
             --self-heal 
