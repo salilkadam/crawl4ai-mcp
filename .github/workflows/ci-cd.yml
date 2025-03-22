@@ -78,22 +78,82 @@ jobs:
           curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x /usr/local/bin/argocd
       
+      - name: Verify ArgoCD server availability
+        run: |
+          max_retries=5
+          retry_count=0
+          while ! curl -sSf ${{ secrets.ARGOCD_SERVER }} > /dev/null; do
+            if [ $retry_count -ge $max_retries ]; then
+              echo "Failed to connect to ArgoCD server after $max_retries attempts"
+              exit 1
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Waiting for ArgoCD server to be available (attempt $retry_count/$max_retries)..."
+            sleep 5
+          done
+      
       - name: Login to ArgoCD
         run: |
-          argocd login ${{ secrets.ARGOCD_SERVER }} \
+          # Attempt login with retries
+          max_retries=3
+          retry_count=0
+          while ! argocd login ${{ secrets.ARGOCD_SERVER }} \
             --username ${{ secrets.ARGOCD_USERNAME }} \
             --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure \
-            --grpc-web
+            --grpc-web; do
+            if [ $retry_count -ge $max_retries ]; then
+              echo "Failed to login to ArgoCD after $max_retries attempts"
+              exit 1
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Retrying ArgoCD login (attempt $retry_count/$max_retries)..."
+            sleep 5
+          done
+          
+          # Verify authentication
+          if ! argocd account list; then
+            echo "Failed to verify ArgoCD authentication"
+            exit 1
+          fi
       
       - name: Update deployment image
         run: |
-          argocd app set ${{ secrets.ARGOCD_APP_NAME }} \
-            --parameter image.tag=${{ github.sha }}
+          # Get current app details for verification
+          if ! argocd app get ${{ secrets.ARGOCD_APP_NAME }}; then
+            echo "Failed to get application details. Check if app exists and permissions are correct."
+            exit 1
+          fi
+          
+          # Update image tag
+          if ! argocd app set ${{ secrets.ARGOCD_APP_NAME }} \
+            --parameter image.tag=${{ github.sha }}; then
+            echo "Failed to update image tag. Check application permissions."
+            exit 1
+          fi
+          
+          # Verify update
+          if ! argocd app get ${{ secrets.ARGOCD_APP_NAME }} -o json | grep -q "${{ github.sha }}"; then
+            echo "Failed to verify image tag update"
+            exit 1
+          fi
       
       - name: Sync ArgoCD application
         run: |
-          argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
+          # Sync with health check
+          if ! argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
             --force \
             --prune \
-            --self-heal 
+            --self-heal \
+            --timeout 300; then
+            echo "Failed to sync application"
+            exit 1
+          fi
+          
+          # Wait for health
+          if ! argocd app wait ${{ secrets.ARGOCD_APP_NAME }} \
+            --health \
+            --timeout 300; then
+            echo "Application failed to become healthy after sync"
+            exit 1
+          fi 
