@@ -4,7 +4,7 @@ metadata:
   name: crawl4ai-mcp
   namespace: crawl4ai
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: crawl4ai-mcp
