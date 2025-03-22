@@ -142,20 +142,34 @@ jobs:
       
       - name: Sync ArgoCD application
         run: |
-          # Sync with health check
-          if ! argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
+          # Sync with retry
+          max_retries=3
+          retry_count=0
+          while ! argocd app sync ${{ secrets.ARGOCD_APP_NAME }} \
             --force \
             --prune \
-            --self-heal \
-            --timeout 300; then
-            echo "Failed to sync application"
-            exit 1
-          fi
+            --retry-limit 3 \
+            --timeout 300; do
+            if [ $retry_count -ge $max_retries ]; then
+              echo "Failed to sync application after $max_retries attempts"
+              exit 1
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Retrying sync (attempt $retry_count/$max_retries)..."
+            sleep 10
+          done
           
-          # Wait for health
-          if ! argocd app wait ${{ secrets.ARGOCD_APP_NAME }} \
+          # Wait for health with retry
+          max_retries=3
+          retry_count=0
+          while ! argocd app wait ${{ secrets.ARGOCD_APP_NAME }} \
             --health \
-            --timeout 300; then
-            echo "Application failed to become healthy after sync"
-            exit 1
-          fi 
+            --timeout 300; do
+            if [ $retry_count -ge $max_retries ]; then
+              echo "Application failed to become healthy after $max_retries attempts"
+              exit 1
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Waiting for health (attempt $retry_count/$max_retries)..."
+            sleep 10
+          done 
