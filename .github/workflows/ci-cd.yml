@@ -125,10 +125,11 @@ jobs:
             exit 1
           fi
           
+          # Create patch JSON
+          PATCH='{"spec":{"source":{"kustomize":{"images":["'${{ env.DOCKER_IMAGE }}:${{ github.sha }}'"]}}}}'
+          
           # Update image tag using kustomize
-          if ! argocd app patch ${{ secrets.ARGOCD_APP_NAME }} \
-            --patch "{\"spec\":{\"source\":{\"kustomize\":{\"images\":[\"${{ env.DOCKER_IMAGE }}:${{ github.sha }}\"]}}}}\" \
-            --type merge; then
+          if ! argocd app patch ${{ secrets.ARGOCD_APP_NAME }} --patch "$PATCH" --type merge; then
             echo "Failed to update image tag. Check application permissions."
             exit 1
           fi
