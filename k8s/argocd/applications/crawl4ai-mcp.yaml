@@ -29,4 +29,10 @@ spec:
       required: true
     - name: image.repository
       value: docker4zerocool/crawl4ai-mcp
+      required: true
+    - name: docker.username
+      value: docker4zerocool
+      required: true
+    - name: docker.password
+      value: ${CUSTOM_DOCKER_PASSWORD}
       required: true 

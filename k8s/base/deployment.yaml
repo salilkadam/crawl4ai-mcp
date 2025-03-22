@@ -13,6 +13,8 @@ spec:
       labels:
         app: crawl4ai-mcp
     spec:
+      imagePullSecrets:
+        - name: docker-registry-secret
       containers:
         - name: crawl4ai-mcp
           image: ${image.repository}:${image.tag}

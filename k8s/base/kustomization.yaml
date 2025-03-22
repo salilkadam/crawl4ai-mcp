@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - service.yaml
+  - secrets.yaml
 
 commonLabels:
   app.kubernetes.io/name: crawl4ai-mcp
