@@ -16,6 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Generate package-lock.json
+        run: npm install --package-lock-only
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
