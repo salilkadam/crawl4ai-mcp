@@ -34,5 +34,5 @@ spec:
       value: docker4zerocool
       required: true
     - name: docker.password
-      value: ${CUSTOM_DOCKER_PASSWORD}
+      value: ${DOCKER_PASSWORD}
       required: true 
