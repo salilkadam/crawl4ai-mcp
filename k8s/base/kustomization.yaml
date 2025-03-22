@@ -8,4 +8,9 @@ resources:
 
 commonLabels:
   app.kubernetes.io/name: crawl4ai-mcp
-  app.kubernetes.io/part-of: crawl4ai 
+  app.kubernetes.io/part-of: crawl4ai
+
+images:
+  - name: docker4zerocool/crawl4ai-mcp
+    newName: docker4zerocool/crawl4ai-mcp
+    newTag: latest 
