@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.csv: |
+    # Allow CI role to manage applications
+    p, role:ci-role, applications, get, */*, allow
+    p, role:ci-role, applications, create, */*, allow
+    p, role:ci-role, applications, update, */*, allow
+    p, role:ci-role, applications, delete, */*, allow
+    p, role:ci-role, applications, sync, */*, allow
+    p, role:ci-role, applications, override, */*, allow
+    p, role:ci-role, applications, action/*, */*, allow
+
+    # Allow CI role to manage projects
+    p, role:ci-role, projects, get, */*, allow
+    p, role:ci-role, projects, create, */*, allow
+    p, role:ci-role, projects, update, */*, allow
+    p, role:ci-role, projects, delete, */*, allow
+
+    # Allow CI role to manage clusters
+    p, role:ci-role, clusters, get, */*, allow
+    p, role:ci-role, clusters, create, */*, allow
+    p, role:ci-role, clusters, update, */*, allow
+    p, role:ci-role, clusters, delete, */*, allow
+
+    # Allow CI role to manage repositories
+    p, role:ci-role, repositories, get, */*, allow
+    p, role:ci-role, repositories, create, */*, allow
+    p, role:ci-role, repositories, update, */*, allow
+    p, role:ci-role, repositories, delete, */*, allow
+
+    # Assign the CI role to the CI user
+    g, admin, role:ci-role 

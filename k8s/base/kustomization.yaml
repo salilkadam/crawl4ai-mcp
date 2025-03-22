@@ -5,6 +5,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - secrets.yaml
+  - argocd-rbac-cm.yaml
 
 commonLabels:
   app.kubernetes.io/name: crawl4ai-mcp
@@ -13,4 +14,10 @@ commonLabels:
 images:
   - name: docker4zerocool/crawl4ai-mcp
     newName: docker4zerocool/crawl4ai-mcp
-    newTag: latest 
+    newTag: latest
+
+configMapGenerator:
+  - name: argocd-rbac-cm
+    behavior: merge
+    envs:
+      - .env 

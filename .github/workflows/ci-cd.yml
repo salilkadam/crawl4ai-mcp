@@ -111,34 +111,80 @@ jobs:
             sleep 5
           done
           
-          # Verify authentication
-          if ! argocd account list; then
-            echo "Failed to verify ArgoCD authentication"
+          # Verify authentication and permissions
+          echo "Verifying ArgoCD authentication and permissions..."
+          
+          # List accessible projects
+          if ! argocd proj list; then
+            echo "Failed to list projects. Check if user has necessary permissions."
             exit 1
           fi
+          
+          # List accessible clusters
+          if ! argocd cluster list; then
+            echo "Failed to list clusters. Check if user has necessary permissions."
+            exit 1
+          fi
+          
+          # List accessible applications
+          if ! argocd app list; then
+            echo "Failed to list applications. Check if user has necessary permissions."
+            exit 1
+          fi
+          
+          echo "Successfully verified ArgoCD access and permissions."
       
       - name: Update deployment image
         run: |
-          # Get current app details for verification
-          if ! argocd app get ${{ secrets.ARGOCD_APP_NAME }}; then
-            echo "Failed to get application details. Check if app exists and permissions are correct."
+          # Verify application exists and is accessible
+          echo "Verifying access to application ${{ secrets.ARGOCD_APP_NAME }}..."
+          if ! argocd app get ${{ secrets.ARGOCD_APP_NAME }} --output json > /dev/null 2>&1; then
+            echo "Failed to access application. Checking specific issues..."
+            
+            # Check if app exists
+            if ! argocd app list | grep -q "${{ secrets.ARGOCD_APP_NAME }}"; then
+              echo "Application ${{ secrets.ARGOCD_APP_NAME }} not found in accessible applications"
+              exit 1
+            fi
+            
+            # Check project access
+            APP_PROJECT=$(argocd app get ${{ secrets.ARGOCD_APP_NAME }} -o json | jq -r .spec.project)
+            if ! argocd proj get "$APP_PROJECT" > /dev/null 2>&1; then
+              echo "No access to project $APP_PROJECT. Check project permissions."
+              exit 1
+            fi
+            
+            echo "Application exists but cannot be accessed. Check role permissions."
             exit 1
           fi
           
           # Create patch JSON
+          echo "Creating patch for image update..."
           PATCH='{"spec":{"source":{"kustomize":{"images":["'${{ env.DOCKER_IMAGE }}:${{ github.sha }}'"]}}}}'
           
           # Update image tag using kustomize
+          echo "Applying patch to update image..."
           if ! argocd app patch ${{ secrets.ARGOCD_APP_NAME }} --patch "$PATCH" --type merge; then
-            echo "Failed to update image tag. Check application permissions."
+            echo "Failed to update image tag. Full error details:"
+            argocd app patch ${{ secrets.ARGOCD_APP_NAME }} --patch "$PATCH" --type merge 2>&1
             exit 1
           fi
           
-          # Verify update
-          if ! argocd app get ${{ secrets.ARGOCD_APP_NAME }} -o json | grep -q "${{ github.sha }}"; then
-            echo "Failed to verify image tag update"
-            exit 1
-          fi
+          # Verify update with retries
+          echo "Verifying image update..."
+          max_retries=3
+          retry_count=0
+          while ! argocd app get ${{ secrets.ARGOCD_APP_NAME }} -o json | grep -q "${{ github.sha }}"; do
+            if [ $retry_count -ge $max_retries ]; then
+              echo "Failed to verify image tag update after $max_retries attempts"
+              exit 1
+            fi
+            retry_count=$((retry_count + 1))
+            echo "Waiting for image update to propagate (attempt $retry_count/$max_retries)..."
+            sleep 5
+          done
+          
+          echo "Successfully updated application image."
       
       - name: Sync ArgoCD application
         run: |
