@@ -29,6 +29,6 @@ spec:
         - /spec/template/spec/containers/0/image
     - group: ""
       kind: Secret
-      name: docker-registry-secret
+      name: regcred
       jsonPointers:
         - /stringData 
