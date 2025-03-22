@@ -21,8 +21,14 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
   ignoreDifferences:
     - group: apps
       kind: Deployment
       jsonPointers:
-        - /spec/template/spec/containers/0/image 
+        - /spec/template/spec/containers/0/image
+    - group: ""
+      kind: Secret
+      name: docker-registry-secret
+      jsonPointers:
+        - /stringData 

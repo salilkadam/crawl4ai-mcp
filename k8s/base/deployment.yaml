@@ -14,7 +14,7 @@ spec:
         app: crawl4ai-mcp
     spec:
       imagePullSecrets:
-        - name: docker-registry-secret
+        - name: regcred
       containers:
         - name: crawl4ai-mcp
           image: docker4zerocool/crawl4ai-mcp:latest
