@@ -20,4 +20,11 @@ configMapGenerator:
   - name: argocd-rbac-cm
     behavior: merge
     envs:
-      - .env 
+      - .env
+
+secretGenerator:
+  - name: docker-registry-secret
+    namespace: crawl4ai
+    type: kubernetes.io/dockerconfigjson
+    files:
+      - .dockerconfigjson=.docker/config.json 

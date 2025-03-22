@@ -73,6 +73,24 @@ jobs:
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
       
+      - name: Setup Docker registry secret
+        run: |
+          # Create Docker registry secret
+          DOCKER_AUTH=$(echo -n "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" | base64)
+          
+          # Create namespace if it doesn't exist
+          kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Create or update the secret
+          kubectl create secret docker-registry docker-registry-secret \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --docker-server=https://index.docker.io/v1/ \
+            --docker-username=${{ secrets.DOCKER_USERNAME }} \
+            --docker-password=${{ secrets.DOCKER_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          echo "Docker registry secret created successfully"
+      
       - name: Install ArgoCD CLI
         run: |
           curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
