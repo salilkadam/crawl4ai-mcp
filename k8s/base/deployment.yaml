@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawl4ai-mcp
+  namespace: crawl4ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawl4ai-mcp
+  template:
+    metadata:
+      labels:
+        app: crawl4ai-mcp
+    spec:
+      containers:
+        - name: crawl4ai-mcp
+          image: ${image.repository}:${image.tag}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: production
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20 
